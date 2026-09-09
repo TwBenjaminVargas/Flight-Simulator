@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mesh_data.h"
+#include "MeshData.h"
 
 namespace primitives {
 
