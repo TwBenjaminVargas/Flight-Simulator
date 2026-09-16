@@ -1,8 +1,7 @@
 #include "Shader.h"
 
 #include <glad/gl.h>
-#include <iostream>
-
+#include <vector>
 
 Shader::~Shader()
 {
@@ -33,62 +32,79 @@ void Shader::clear()
 
 void Shader::use() const
 {
+    if (id_ == 0U) {
+        throw std::runtime_error(
+            "ERROR::SHADER::USE_CALLED_ON_INVALID_PROGRAM\n"
+            "Se intentó llamar a use() en un Shader no inicializado, que falló al compilar o que fue movido."
+        );
+    }
     glUseProgram(id_);
 }
 
-
-static bool compile_stage(unsigned int shader, const std::string& source, const std::string& stage_name)
+static void compile_stage_or_throw(unsigned int shader, const std::string& source, const std::string& stage_name)
 {
     const char* src = source.c_str();
     glShaderSource(shader, 1, &src, nullptr);
     glCompileShader(shader);
 
-    int success;
+    int success = 0;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if (!success) {
         int log_len = 0;
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_len);
-        std::string log(log_len, '\0');
-        glGetShaderInfoLog(shader, log_len, nullptr, log.data());
-        std::cerr << "ERROR::SHADER::" << stage_name << "::COMPILATION\n" << log << std::endl;
-        return false;
+        
+        std::string log;
+        if (log_len > 0) {
+            log.resize(static_cast<size_t>(log_len));
+            glGetShaderInfoLog(shader, log_len, nullptr, log.data());
+        }
+
+        throw std::runtime_error("ERROR::SHADER::" + stage_name + "::COMPILATION_FAILED\n" + log);
     }
-    return true;
 }
 
-bool Shader::compile_from_source(const std::string& vs, const std::string& fs)
+void Shader::compile_from_source(const std::string& vs, const std::string& fs)
 {
-    clear(); // si había un programa anterior, lo libera
+    clear(); // Si había un programa anterior, lo libera
 
     unsigned int vert = glCreateShader(GL_VERTEX_SHADER);
     unsigned int frag = glCreateShader(GL_FRAGMENT_SHADER);
 
-    bool ok = compile_stage(vert, vs, "VERTEX") &&
-              compile_stage(frag, fs, "FRAGMENT");
+    try {
+        // Compilamos ambas etapas; si alguna falla, el catch captura y limpia
+        compile_stage_or_throw(vert, vs, "VERTEX");
+        compile_stage_or_throw(frag, fs, "FRAGMENT");
 
-    if (ok) {
+        // Crear y vincular el programa
         id_ = glCreateProgram();
         glAttachShader(id_, vert);
         glAttachShader(id_, frag);
         glLinkProgram(id_);
 
-        int success;
+        int success = 0;
         glGetProgramiv(id_, GL_LINK_STATUS, &success);
         if (!success) {
             int log_len = 0;
             glGetProgramiv(id_, GL_INFO_LOG_LENGTH, &log_len);
-            std::string log(log_len, '\0');
-            glGetProgramInfoLog(id_, log_len, nullptr, log.data());
-            std::cerr << "ERROR::SHADER::LINKING\n" << log << std::endl;
-            glDeleteProgram(id_);
-            id_ = 0U;
-            ok = false;
+
+            std::string log;
+            if (log_len > 0) {
+                log.resize(static_cast<size_t>(log_len));
+                glGetProgramInfoLog(id_, log_len, nullptr, log.data());
+            }
+
+            clear(); // Libera id_ asignado arriba
+            throw std::runtime_error("ERROR::SHADER::LINKING_FAILED\n" + log);
         }
+
+        // Éxito: eliminamos los objetos intermedios
+        glDeleteShader(vert);
+        glDeleteShader(frag);
+
+    } catch (...) {
+        // Garantiza liberar los shaders de etapa antes de propagar la excepción
+        glDeleteShader(vert);
+        glDeleteShader(frag);
+        throw;
     }
-
-    // Los objetos intermedios ya no se necesitan
-    glDeleteShader(vert);
-    glDeleteShader(frag);
-
-    return ok;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <stdexcept>
 
 /**
  * @brief Administra el ciclo de vida de un programa de shader de OpenGL.
@@ -23,13 +24,14 @@ public:
      * @brief Compila y linkea los shaders a partir de su código fuente.
      * @param vs Código fuente del vertex shader.
      * @param fs Código fuente del fragment shader.
-     * @return true si compiló y linkeó correctamente, false en caso contrario.
-     * @note Si falla, imprime el log del driver y el objeto queda vacío.
+     * @throws std::runtime_error si la compilación o el linkeo fallan, incluyendo el log de OpenGL.
      */
-    bool compile_from_source(const std::string& vs, const std::string& fs);
+    void compile_from_source(const std::string& vs, const std::string& fs);
 
     /**
      * @brief Activa este programa de shader para el draw call siguiente.
+     * @throws std::runtime_error si el shader no ha sido compilado previamente 
+     *         o si fue movido (id_ es 0).
      */
     void use() const;
 
