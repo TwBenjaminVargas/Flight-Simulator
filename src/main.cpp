@@ -1,4 +1,4 @@
-#include <cstdlib>          // EXIT_FAILURE, EXIT_SUCCESS
+#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <exception>
@@ -6,44 +6,32 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
-// Tus cabeceras del proyecto
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "Primitives.h"
 #include "Mesh.h"
 #include "Shader.h"
 #include "ResourceManager.hpp"
 
-static const char* kWindowTitle     = "OpenGL Cube - Sin GLM / Uniforms";
+static const char* kWindowTitle     = "Practico 03 - Primitivas y Matriz de Modelo";
 static constexpr int kWindowWidth   = 800;
 static constexpr int kWindowHeight  = 600;
-static constexpr int kGLVerMajor    = 4;
-static constexpr int kGLVerMinor    = 5;
 
-static int glfw_error_code{};
-static std::string glfw_error_str{};
-
-static void error_callback(int error, const char *description);
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 static void processInput(GLFWwindow *window);
-static void print_gl_version(void);
 
 int main()
 {
-    glfwSetErrorCallback(error_callback);
+    if (!glfwInit()) return EXIT_FAILURE;
     
-    if (!glfwInit()) {
-        std::cout << "GLFW initialization failed! - " << glfw_error_str << std::endl;
-        return EXIT_FAILURE;
-    }
-    
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, kGLVerMajor);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, kGLVerMinor);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     
     GLFWwindow* window = glfwCreateWindow(kWindowWidth, kWindowHeight, kWindowTitle, nullptr, nullptr);
-    
-    if (window == nullptr){
+    if (!window) {
         glfwTerminate();
-        std::cout << "GLFW window creation failed! - " << glfw_error_str << std::endl;
         return EXIT_FAILURE;
     }
     
@@ -52,48 +40,48 @@ int main()
     if (!gladLoadGL(glfwGetProcAddress)) {
         glfwDestroyWindow(window);
         glfwTerminate();
-        std::cout << "GLAD initialization failed!" << std::endl;
         return EXIT_FAILURE;
     }
 
-    print_gl_version();
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSwapInterval(1);
 
-    // =========================================================================
-    // CONFIGURACIÓN DE ESTADO DE OPENGL
-    // =========================================================================
-    // Habilitar Z-Buffer para ordenamiento de profundidad
     glEnable(GL_DEPTH_TEST);
 
     // =========================================================================
-    // CARGA DE RECURSOS (Mesh y Shaders)
+    // CARGA DE RECURSOS (Mallas cargadas UNA SOLA VEZ en la VRAM)
     // =========================================================================
-    Mesh cubeMesh;
-    Shader cubeShader;
+    Mesh cubeMesh, cylinderMesh, coneMesh;
+    Shader shader;
 
     try {
-        //Generar los datos del cubo en CPU y cargarlos en la GPU
-        MeshData cubeData = primitives::cube(1.0f, 1.0f, 1.0f);
-        cubeMesh.load(cubeData);
+        cubeMesh.load(primitives::cube(1.0f, 1.0f, 1.0f));
+        cylinderMesh.load(primitives::cylinder(0.6f, 1.5f, 32));
+        coneMesh.load(primitives::cone(0.7f, 45.0f, 32));
 
-        // Cargar fuentes del Shader desde disco
         ResourceManager resourceManager("./assets/shaders"); 
         int shaderKey = -1;
-        
         const ShaderSource& source = resourceManager.load_shader_source(
-            shaderKey, "cube.vert", "cube.frag"
+            shaderKey, "normal_color.vert", "normal_color.frag"
         );
 
-        // Compilar y vincular el Shader
-        cubeShader.compile_from_source(source.vs, source.fs);
+        shader.compile_from_source(source.vs, source.fs);
 
     } catch (const std::exception& e) {
-        std::cerr << "\n[EXCEPCIÓN EN LA CARGA DE RECURSOS]:\n" << e.what() << std::endl;
+        std::cerr << "[ERROR RECURSOS]: " << e.what() << std::endl;
         glfwDestroyWindow(window);
         glfwTerminate();
         return EXIT_FAILURE;
     }
+
+    // =========================================================================
+    // MATRIZ DE AJUSTE (Dada en clase)
+    // =========================================================================
+    const float ancho = static_cast<float>(kWindowWidth);
+    const float alto  = static_cast<float>(kWindowHeight);
+    
+    // Ajusta la relación de aspecto y niega el eje Z
+    const glm::mat4 ajuste = glm::scale(glm::mat4(1.0f), glm::vec3(alto / ancho, 1.0f, -1.0f));
 
     // =========================================================================
     // BUCLE DE RENDERIZADO
@@ -101,16 +89,48 @@ int main()
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
-        // Limpiar el buffer de color y el buffer de profundidad
-        glClearColor(51.0f / 255.0f, 55.0f / 255.0f, 76.0f / 255.0f, 1.0f);
+        glClearColor(0.15f, 0.15f, 0.18f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Activar el Shader
-        cubeShader.use();
+        shader.use();
 
-        // Dibujar el cubo usando su VAO y la cantidad de índices
+        // Se envía la matriz de ajuste fija
+        shader.set_uniform("uAjuste", ajuste);
+
+        float tiempo = static_cast<float>(glfwGetTime());
+
+        // ---------------------------------------------------------------------
+        // CUBO (Izquierda, tamaño reducido)
+        // ---------------------------------------------------------------------
+        glm::mat4 uModelCubo = glm::translate(glm::mat4(1.0f), glm::vec3(-0.6f, 0.0f, 0.0f));
+        uModelCubo = glm::rotate(uModelCubo, tiempo, glm::vec3(0.5f, 1.0f, 0.0f));
+        uModelCubo = glm::scale(uModelCubo, glm::vec3(0.4f)); // Cambio de tamaño vía uniform
+        
+        shader.set_uniform("uModel", uModelCubo);
         glBindVertexArray(cubeMesh.vao());
         glDrawElements(GL_TRIANGLES, cubeMesh.count(), GL_UNSIGNED_INT, nullptr);
+
+        // ---------------------------------------------------------------------
+        // CILINDRO (Centro)
+        // ---------------------------------------------------------------------
+        glm::mat4 uModelCilindro = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+        uModelCilindro = glm::rotate(uModelCilindro, tiempo * 0.7f, glm::vec3(1.0f, 0.0f, 0.0f));
+        uModelCilindro = glm::scale(uModelCilindro, glm::vec3(0.35f)); // Cambio de tamaño
+        
+        shader.set_uniform("uModel", uModelCilindro);
+        glBindVertexArray(cylinderMesh.vao());
+        glDrawElements(GL_TRIANGLES, cylinderMesh.count(), GL_UNSIGNED_INT, nullptr);
+
+        // ---------------------------------------------------------------------
+        // CONO (Derecha)
+        // ---------------------------------------------------------------------
+        glm::mat4 uModelCono = glm::translate(glm::mat4(1.0f), glm::vec3(0.6f, 0.0f, 0.0f));
+        uModelCono = glm::rotate(uModelCono, tiempo * 1.2f, glm::vec3(0.0f, 1.0f, 0.5f));
+        uModelCono = glm::scale(uModelCono, glm::vec3(0.4f)); // Cambio de tamaño
+        
+        shader.set_uniform("uModel", uModelCono);
+        glBindVertexArray(coneMesh.vao());
+        glDrawElements(GL_TRIANGLES, coneMesh.count(), GL_UNSIGNED_INT, nullptr);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -118,13 +138,7 @@ int main()
 
     glfwDestroyWindow(window);
     glfwTerminate();
-    
     return EXIT_SUCCESS;
-}
-
-void error_callback(int error, const char *description) {
-    glfw_error_code = error;
-    glfw_error_str = std::string(description);
 }
 
 void framebuffer_size_callback([[maybe_unused]] GLFWwindow* window, int width, int height) {
@@ -135,11 +149,4 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
     }
-}
-
-void print_gl_version(void) {
-    std::cout << " OpenGL Vendor: "   << glGetString(GL_VENDOR)                   << std::endl;
-    std::cout << " OpenGL Renderer: " << glGetString(GL_RENDERER)                 << std::endl;
-    std::cout << " OpenGL Version: "  << glGetString(GL_VERSION)                  << std::endl;
-    std::cout << " GLSL Version: "    << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
 }

@@ -83,34 +83,28 @@ void Mesh::load(const MeshData& data) {
     const GLsizeiptr vboSize = static_cast<GLsizeiptr>(data.vertices.size() * sizeof(Vertex));
     glNamedBufferData(vbo_, vboSize, data.vertices.data(), GL_STATIC_DRAW); //GL_STATIC_DRAW: los datos no cambian, se usan muchas veces para dibujar
 
-    // Configurar el formato de los atributos en el VAO
+        // Configurar el formato de los atributos en el VAO
     const GLsizei stride = static_cast<GLsizei>(sizeof(Vertex));
 
-    // --- Atributo 0: Posición (px, py, pz) ---
+    // --- Atributo 0: Posición (x, y, z) ---
     glEnableVertexArrayAttrib(vao_, 0);
-    glVertexArrayAttribFormat(
-        vao_, 
-        0,                            // Atributo
-        3,                            // Componentes (X, Y, Z)
-        GL_FLOAT,                     // Tipo de dato
-        GL_FALSE,                     // Normalizado
-        static_cast<GLuint>(offsetof(Vertex, px)) // Offset dinámico
-    );
-    glVertexArrayAttribBinding(vao_, 0, 0); // Enlace al Binding Point 0
+    glVertexArrayAttribFormat(vao_, 0, 3, GL_FLOAT, GL_FALSE,
+        static_cast<GLuint>(offsetof(Vertex, position)));
+    glVertexArrayAttribBinding(vao_, 0, 0);
 
-    // --- Atributo 1: Color (r, g, b) ---
+    // --- Atributo 1: Normal (nx, ny, nz) ---
     glEnableVertexArrayAttrib(vao_, 1);
-    glVertexArrayAttribFormat(
-        vao_, 
-        1,                            // Atributo
-        3,                            // Componentes (R, G, B)
-        GL_FLOAT,                     // Tipo de dato
-        GL_FALSE,                     // Normalizado
-        static_cast<GLuint>(offsetof(Vertex, r))  // Offset dinámico
-    );
-    glVertexArrayAttribBinding(vao_, 1, 0); // Enlace al Binding Point 0
+    glVertexArrayAttribFormat(vao_, 1, 3, GL_FLOAT, GL_FALSE,
+        static_cast<GLuint>(offsetof(Vertex, normal)));
+    glVertexArrayAttribBinding(vao_, 1, 0);
 
-    // Vincular el VBO al Binding Point 0 del VAO
+    // --- Atributo 2: Coordenadas de textura (u, v) ---
+    glEnableVertexArrayAttrib(vao_, 2);
+    glVertexArrayAttribFormat(vao_, 2, 2, GL_FLOAT, GL_FALSE,
+        static_cast<GLuint>(offsetof(Vertex, tex_coords)));
+    glVertexArrayAttribBinding(vao_, 2, 0);
+
+    // Vincular el VBO al Binding Point 0
     glVertexArrayVertexBuffer(vao_, 0, vbo_, 0, stride);
 
     // Gestionar el EBO si la malla es indexada
