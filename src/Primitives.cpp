@@ -115,7 +115,7 @@ MeshData cylinder(float radio, float largo, unsigned gajos, unsigned anillos)
 }
 
 /**
- * Genera la superficie lateral de un cono paramétrico sobre el eje Y (sin tapa).
+ * Genera la superficie lateral de un cono paramétrico sobre el eje Y (sin tapa) y centrado en el origen.
  * 
  * - **Ápice y Atributos:** Aunque la posición 3D colapsa en el punto superior, los
  *   vértices se duplican por gajo (ring == anillos) para mantener la normal inclinada
@@ -172,6 +172,18 @@ MeshData cone(float radio, float conicidad, unsigned gajos, unsigned anillos)
     }
 
     return data;
+}
+
+MeshData cone_from_height(float radio, float altura, unsigned gajos, unsigned anillos)
+{
+    // Calculamos el semiángulo en radianes: atan(r / h)
+    float half_alpha_rad = std::atan(radio / altura);
+
+    // Convertimos el ángulo total (2 * half_alpha) a grados sexagesimales
+    float conicidad_deg = (2.0f * half_alpha_rad) * (180.0f / PI);
+
+    // Reutilizamos la función que ya tenemos
+    return cone(radio, conicidad_deg, gajos, anillos);
 }
 
 } // namespace primitives
