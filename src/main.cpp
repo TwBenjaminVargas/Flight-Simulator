@@ -16,6 +16,8 @@
 #include "ResourceManager.hpp"
 #include "Aircraft.h"
 #include "RenderItem.h"
+#include "camera/CameraSystem.h"
+#include "camera/CameraInput.h"
 
 static const char* kWindowTitle     = "Practico 03 - Primitivas y Matriz de Modelo";
 static constexpr int kWindowWidth   = 800;
@@ -46,7 +48,16 @@ int main()
         return EXIT_FAILURE;
     }
 
+    // Tamaño real del framebuffer (puede diferir del de la ventana en pantallas HiDPI)
+    int fbw = 0, fbh = 0;
+    glfwGetFramebufferSize(window, &fbw, &fbh);
+
+    CameraSystem camara(fbw, fbh);
+
+    // El callback llega al objeto por el puntero de la ventana
+    glfwSetWindowUserPointer(window, &camara);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
     glfwSwapInterval(1);
 
     glEnable(GL_DEPTH_TEST);
@@ -56,6 +67,7 @@ int main()
     // =========================================================================
     //Mesh cubeMesh, cylinderMesh, coneMesh;
     Aircraft avion;
+    CameraInput entrada;
     Shader shader;
 
     try {
@@ -79,6 +91,7 @@ int main()
         return EXIT_FAILURE;
     }
 
+    /*
     // =========================================================================
     // MATRIZ DE AJUSTE (Dada en clase)
     // =========================================================================
@@ -87,6 +100,7 @@ int main()
     
     // Ajusta la relación de aspecto y niega el eje Z
     const glm::mat4 ajuste = glm::scale(glm::mat4(1.0f), glm::vec3(alto / ancho, 1.0f, -1.0f));
+    */
 
     // =========================================================================
     // BUCLE DE RENDERIZADO
@@ -100,7 +114,7 @@ int main()
         shader.use();
 
         // Se envía la matriz de ajuste fija
-        shader.set_uniform("uAjuste", ajuste);
+        //shader.set_uniform("uAjuste", ajuste);
 
         float tiempo = static_cast<float>(glfwGetTime());
 
@@ -139,19 +153,20 @@ int main()
         glDrawElements(GL_TRIANGLES, coneMesh.count(), GL_UNSIGNED_INT, nullptr);
         */
 
-        // Cámara provisoria: lo gira un poco para ver en 3D y lo achica para que entre.
-        const glm::mat4 vista =
-            glm::scale(glm::mat4(1.0f), glm::vec3(2.5f, 2.5f, 1.0f)) *
-            glm::rotate(glm::mat4(1.0f), 0.5f, glm::vec3(0, 1, 0)) *
-            glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1, 0, 0));
+        const glm::vec3 posAvion(0.0f);
+        const glm::vec3 angAvion(0.0f, std::sin(tiempo) * 0.0f, 0.0f);  // cabeceo
 
-        // Solo cabeceo (eje Y del modelo, paralelo al ala), alrededor del centro de gravedad
-        avion.update(glm::vec3(0.0f), glm::vec3(0.0f, std::sin(tiempo) * 0.6f, 0.0f));
+        avion.update(posAvion, angAvion);
+        const CameraCommand cmd = entrada.poll(window);
+        camara.update(posAvion, angAvion, cmd);
+
+        shader.set_uniform("uView",       camara.data().view);
+        shader.set_uniform("uProjection", camara.data().projection);
 
         std::vector<RenderItem> items;
         avion.collect(items);
         for (const auto& item : items) {
-            shader.set_uniform("uModel", vista * item.model);
+            shader.set_uniform("uModel", item.model);
             glBindVertexArray(item.mesh->vao());
             glDrawElements(GL_TRIANGLES, item.mesh->count(), GL_UNSIGNED_INT, nullptr);
         }
@@ -165,8 +180,11 @@ int main()
     return EXIT_SUCCESS;
 }
 
-void framebuffer_size_callback([[maybe_unused]] GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);   
+
+    auto* camara = static_cast<CameraSystem*>(glfwGetWindowUserPointer(window));
+    if (camara) camara->set_viewport(width, height); 
 }
 
 void processInput(GLFWwindow *window) {

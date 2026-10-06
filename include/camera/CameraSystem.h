@@ -20,7 +20,7 @@ private:
     // Estado de la órbita (vista inicial: 3/4 delantero)
     float yaw_       = 2.35f;   // [rad] ~135°
     float pitch_     = 0.30f;   // [rad]
-    float distancia_ = 3.0f;    // [unidades de escena]
+    float distancia_ = 2.0f;    // [unidades de escena]
 
     // Parámetros de la proyección
     float fovy_ = 0.7854f;      // [rad] 45°
