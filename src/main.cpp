@@ -57,6 +57,8 @@ int main()
     // El callback llega al objeto por el puntero de la ventana
     glfwSetWindowUserPointer(window, &camara);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    //call back rueda del mouse para zoom
+    glfwSetScrollCallback(window, CameraInput::scroll_callback);
 
     glfwSwapInterval(1);
 
@@ -86,17 +88,6 @@ int main()
         glfwTerminate();
         return EXIT_FAILURE;
     }
-
-    /*
-    // =========================================================================
-    // MATRIZ DE AJUSTE (Dada en clase)
-    // =========================================================================
-    const float ancho = static_cast<float>(kWindowWidth);
-    const float alto  = static_cast<float>(kWindowHeight);
-    
-    // Ajusta la relación de aspecto y niega el eje Z
-    const glm::mat4 ajuste = glm::scale(glm::mat4(1.0f), glm::vec3(alto / ancho, 1.0f, -1.0f));
-    */
 
     // =========================================================================
     // BUCLE DE RENDERIZADO
