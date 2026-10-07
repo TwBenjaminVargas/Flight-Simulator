@@ -64,6 +64,16 @@ public:
     void set_uniform(const std::string& nombre, const glm::vec3& v) const;
 
     /**
+     * @brief Envía un vector de 4 componentes al uniform especificado.
+     * @param nombre Nombre exacto de la variable uniform en GLSL.
+     * @param v Vector glm::vec4 a transferir.
+     * @throws std::runtime_error Si el uniform no existe, o si hay un desacople de tipo
+     *         entre C++ y GLSL (GL_INVALID_OPERATION).
+     */
+    void set_uniform(const std::string& nombre, const glm::vec4& v) const;
+
+
+    /**
      * @brief Envía un valor de punto flotante al uniform especificado.
      * @param nombre Nombre exacto de la variable uniform en GLSL.
      * @param valor Valor float a transferir.

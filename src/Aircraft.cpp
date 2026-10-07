@@ -34,6 +34,7 @@ void Aircraft::init()
     const glm::mat4 I(1.0f);
     const glm::vec3 ejeZ(0.0f, 0.0f, 1.0f);
 
+    // función anónima (lambda) que guarda al mismo tiempo la malla, la matriz local y el color de una pieza en los tres vectores correspondientes.
     auto agregar = [&](const Mesh& m, const glm::mat4& local, const glm::vec4& color) {
         meshes_.push_back(&m);
         locales_.push_back(local);

@@ -31,7 +31,7 @@ int main()
     if (!glfwInit()) return EXIT_FAILURE;
     
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     
     GLFWwindow* window = glfwCreateWindow(kWindowWidth, kWindowHeight, kWindowTitle, nullptr, nullptr);
@@ -65,21 +65,17 @@ int main()
     // =========================================================================
     // CARGA DE RECURSOS (Mallas cargadas UNA SOLA VEZ en la VRAM)
     // =========================================================================
-    //Mesh cubeMesh, cylinderMesh, coneMesh;
     Aircraft avion;
     CameraInput entrada;
     Shader shader;
 
     try {
-        //cubeMesh.load(primitives::cube(1.0f, 1.0f, 1.0f));
-        //cylinderMesh.load(primitives::cylinder(0.6f, 1.5f, 32));
-        //coneMesh.load(primitives::cone(0.7f, 45.0f, 32));
         avion.init();
 
         ResourceManager resourceManager("./assets/shaders"); 
         int shaderKey = -1;
         const ShaderSource& source = resourceManager.load_shader_source(
-            shaderKey, "normal_color.vert", "normal_color.frag"
+            shaderKey, "vertex.vert", "fragment.frag"
         );
 
         shader.compile_from_source(source.vs, source.fs);
@@ -118,40 +114,6 @@ int main()
 
         float tiempo = static_cast<float>(glfwGetTime());
 
-        /*
-        // ---------------------------------------------------------------------
-        // CUBO (Izquierda, tamaño reducido)
-        // ---------------------------------------------------------------------
-        glm::mat4 uModelCubo = glm::translate(glm::mat4(1.0f), glm::vec3(-0.6f, 0.0f, 0.0f));
-        uModelCubo = glm::rotate(uModelCubo, tiempo, glm::vec3(0.5f, 1.0f, 0.0f));
-        uModelCubo = glm::scale(uModelCubo, glm::vec3(0.4f)); // Cambio de tamaño vía uniform
-        
-        shader.set_uniform("uModel", uModelCubo);
-        glBindVertexArray(cubeMesh.vao());
-        glDrawElements(GL_TRIANGLES, cubeMesh.count(), GL_UNSIGNED_INT, nullptr);
-
-        // ---------------------------------------------------------------------
-        // CILINDRO (Centro)
-        // ---------------------------------------------------------------------
-        glm::mat4 uModelCilindro = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-        uModelCilindro = glm::rotate(uModelCilindro, tiempo * 0.7f, glm::vec3(1.0f, 0.0f, 0.0f));
-        uModelCilindro = glm::scale(uModelCilindro, glm::vec3(0.35f)); // Cambio de tamaño
-        
-        shader.set_uniform("uModel", uModelCilindro);
-        glBindVertexArray(cylinderMesh.vao());
-        glDrawElements(GL_TRIANGLES, cylinderMesh.count(), GL_UNSIGNED_INT, nullptr);
-
-        // ---------------------------------------------------------------------
-        // CONO (Derecha)
-        // ---------------------------------------------------------------------
-        glm::mat4 uModelCono = glm::translate(glm::mat4(1.0f), glm::vec3(0.6f, 0.0f, 0.0f));
-        uModelCono = glm::rotate(uModelCono, tiempo * 1.2f, glm::vec3(0.0f, 1.0f, 0.5f));
-        uModelCono = glm::scale(uModelCono, glm::vec3(0.4f)); // Cambio de tamaño
-        
-        shader.set_uniform("uModel", uModelCono);
-        glBindVertexArray(coneMesh.vao());
-        glDrawElements(GL_TRIANGLES, coneMesh.count(), GL_UNSIGNED_INT, nullptr);
-        */
 
         const glm::vec3 posAvion(0.0f);
         const glm::vec3 angAvion(0.0f, std::sin(tiempo) * 0.0f, 0.0f);  // cabeceo
@@ -166,7 +128,11 @@ int main()
         std::vector<RenderItem> items;
         avion.collect(items);
         for (const auto& item : items) {
+
             shader.set_uniform("uModel", item.model);
+
+            shader.set_uniform("uColor", item.color);
+
             glBindVertexArray(item.mesh->vao());
             glDrawElements(GL_TRIANGLES, item.mesh->count(), GL_UNSIGNED_INT, nullptr);
         }

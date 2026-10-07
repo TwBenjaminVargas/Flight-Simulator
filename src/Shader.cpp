@@ -179,6 +179,14 @@ void Shader::set_uniform(const std::string& nombre, const glm::vec3& v) const
     check_uniform_type_error(nombre);
 }
 
+void Shader::set_uniform(const std::string& nombre, const glm::vec4& v) const
+{
+    int loc = get_uniform_location(nombre);
+    glProgramUniform4fv(id_, loc, 1, glm::value_ptr(v));
+    check_uniform_type_error(nombre);
+}
+
+
 void Shader::set_uniform(const std::string& nombre, float valor) const
 {
     int loc = get_uniform_location(nombre);
